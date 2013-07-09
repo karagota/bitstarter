@@ -42,12 +42,14 @@ var assertFileExists = function(infile) {
 };
 
 var assertUrlExists = function(url) {
-    var file  = rest.get(url);
-    if (!fs.existsSync(file)) {
-	console.log("%s is not available.Exiting.", file);
-	process.exit(1);
-    }
-    return file;
+    var request =  restler.get(url).on('complete',function(result, data){
+	if (result instanceof Error){
+	    console.log("%s is not available. Exiting.", url);
+	    process.exit(1);
+	} else {
+	    return data;
+}});
+  
 };
 
 var cheerioHtmlFile = function(htmlfile) {
