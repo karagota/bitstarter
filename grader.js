@@ -68,7 +68,7 @@ var checkHtmlString = function(HtmlString, checksfile) {
 	output(outJson);
 };
 
-var function output(out) {
+var output = function(out) {
 	console.log(out);
 }
 
