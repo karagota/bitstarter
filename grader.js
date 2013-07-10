@@ -23,7 +23,6 @@ References:
  - https://developer.mozilla.org/en-US/docs/JSON#JSON_in_Firefox_2
 
 */
-
 var fs = require('fs');
 var program = require('commander');
 var cheerio = require('cheerio');
@@ -35,45 +34,53 @@ var URL_DEFAULT = "http://obscure-fjord-6124.herokuapp.com/";
 var assertFileExists = function(infile) {
     var instr = infile.toString();
     if(!fs.existsSync(instr)) {
-	console.log("%s does not exist.Exiting.", instr);
-	process.exit(1); // http://nodejs.org/api/process.html#process_process_exit_code
+        console.log("%s does not exist. Exiting.", instr);
+        process.exit(1); // http://nodejs.org/api/process.html#process_process_exit_code
     }
     return instr;
-};
-
-var assertUrlExists = function(url) {
-    var request =  restler.get(url).on('complete',function(result, data){
-	if (result instanceof Error){
-	    console.log("%s is not available. Exiting.", url);
-	    process.exit(1);
-	} else {
-	    return data;
-}});
-  
-};
-
-var cheerioHtmlFile = function(htmlfile) {
-    return cheerio.load(fs.readFileSync(htmlfile));
 };
 
 var loadChecks = function(checksfile) {
     return JSON.parse(fs.readFileSync(checksfile));
 };
 
-var restlerUrlGet = function(url) {
-    return restler.get(url);
+var buildfn = function(checksfile) {
+    var response2console = function(result, response) {
+        if (result instanceof Error) {
+            console.error('Error: ' + util.format(response.message));
+        } else {
+			var HtmlString = result.toString();
+            var checkJson = checkHtmlString(HtmlString, checksfile);
+			var outJson = JSON.stringify(checkJson, null, 4);
+			console.log(outJson);
+        }
+    };
+    return response2console;
 };
 
-var checkHtmlFile = function(url, htmlfile, checksfile) {
-    if (htmlfile)  $ = cheerioHtmlFile(htmlfile);
-    else if (url)  $ = restlerUrlGet(url);
-    var checks = loadChecks(checksfile).sort();
-    var out = {};
-    for (var ii in checks) {
-    var present = $(checks[ii]).length > 0;
-		    out[checks[ii]] = present;
-   }
-    return out;
+var checkHtmlString = function(HtmlString, checksfile) {
+	$ = cheerio.load(HtmlString);
+	var checks = loadChecks(checksfile).sort();
+	var out = {};
+	for (var ii in checks) {
+		var present = $(checks[ii]).length > 0;
+		out[checks[ii]] = present;
+	}
+	return out;
+};
+
+
+
+var checkHtmlFile = function(htmlfile, checksfile) {
+    var string  = fs.readFileSync(htmlfile);
+    var checkJson =  checkHtmlString(string, checksfile);
+	var outJson = JSON.stringify(checkJson, null, 4);
+	console.log(outJson);
+};
+
+var checkUrl = function (url, checksfile) {
+    var response2console = buildfn(checksfile);
+	restler.get(url).on('complete', response2console);
 };
 
 var clone = function(fn) {
@@ -82,15 +89,16 @@ var clone = function(fn) {
     return fn.bind({});
 };
 
-if (require.main == module) {
+if(require.main == module) {
     program
-	.option('-c, --checks <check_file>', 'Path to checks.json', clone(assertFileExists), CHECKSFILE_DEFAULT)
-	.option('-f, --file <html_file>', 'Path to index.html', clone(assertFileExists), HTMLFILE_DEFAULT)
-	.option('-u, --url <url>', 'Url path to index.html', clone(assertUrlExists), URL_DEFAULT)
-	.parse(process.argv);
-    var  checkJson = checkHtmlFile(program.url, program.file, program.checks);
-    var outJson = JSON.stringify(checkJson, null, 4);
-    console.log(outJson);
+        .option('-c, --checks <check_file>', 'Path to checks.json', clone(assertFileExists), CHECKSFILE_DEFAULT)
+        .option('-f, --file <html_file>', 'Path to index.html', clone(assertFileExists), HTMLFILE_DEFAULT)
+		.option('-u, --url <url>', 'url')
+        .parse(process.argv);
+	if (program.url) checkUrl(program.url, program.checks);
+	else if (program.file) checkHtmlFile(program.file, program.checks);
+	
 } else {
     exports.checkHtmlFile = checkHtmlFile;
 }
+
