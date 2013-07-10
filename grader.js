@@ -23,6 +23,7 @@ References:
  - https://developer.mozilla.org/en-US/docs/JSON#JSON_in_Firefox_2
 
 */
+var util = require('util');
 var fs = require('fs');
 var program = require('commander');
 var cheerio = require('cheerio');
@@ -49,10 +50,7 @@ var buildfn = function(checksfile) {
         if (result instanceof Error) {
             console.error('Error: ' + util.format(response.message));
         } else {
-			var HtmlString = result.toString();
-            var checkJson = checkHtmlString(HtmlString, checksfile);
-			var outJson = JSON.stringify(checkJson, null, 4);
-			console.log(outJson);
+            checkHtmlString(result.toString(), checksfile);
         }
     };
     return response2console;
@@ -66,16 +64,17 @@ var checkHtmlString = function(HtmlString, checksfile) {
 		var present = $(checks[ii]).length > 0;
 		out[checks[ii]] = present;
 	}
-	return out;
+	var outJson = JSON.stringify(out, null, 4);
+	output(outJson);
 };
 
-
+var function output(out) {
+	console.log(out);
+}
 
 var checkHtmlFile = function(htmlfile, checksfile) {
     var string  = fs.readFileSync(htmlfile);
-    var checkJson =  checkHtmlString(string, checksfile);
-	var outJson = JSON.stringify(checkJson, null, 4);
-	console.log(outJson);
+    checkHtmlString(string, checksfile);
 };
 
 var checkUrl = function (url, checksfile) {
@@ -99,6 +98,8 @@ if(require.main == module) {
 	else if (program.file) checkHtmlFile(program.file, program.checks);
 	
 } else {
-    exports.checkHtmlFile = checkHtmlFile;
+	exports.checkHtmlFile = checkHtmlFile;
+	exports.checkUrl = checkUrl;
 }
+
 
